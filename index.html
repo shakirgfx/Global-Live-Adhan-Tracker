@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Global Live Adhan Tracker</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Amiri for Arabic typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- jQuery 3.7.1 CDN -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <!-- D3.js & TopoJSON for Vector World Map -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            arabic: ['Amiri', 'serif'],
+          },
+          colors: {
+            emerald: {
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              900: '#064e3b',
+            },
+            slate: {
+              800: '#1e293b',
+              850: '#151f30',
+              900: '#0f172a',
+              950: '#080d1a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom scrollbar and animations */
+    body {
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%2310b981' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='3 3 21 12 12 21 9 13 3 3'%3E%3C/polygon%3E%3C/svg%3E"), auto;
+    }
+
+    button, select, a, input, [role="button"] {
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%2334d399' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='3 3 21 12 12 21 9 13 3 3'%3E%3C/polygon%3E%3C/svg%3E"), pointer;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.5);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #10b981;
+    }
+
+    .glass-card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #f8fafc;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .glass-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.2);
+    }
+
+    .glass-card-active {
+      background: rgba(16, 185, 129, 0.12);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.25);
+      animation: breathe-glow 3s infinite ease-in-out;
+    }
+
+    @keyframes breathe-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.15); }
+      50% { box-shadow: 0 0 35px rgba(16, 185, 129, 0.35); }
+    }
+
+    .pulse-emerald {
+      animation: pulse-emerald-anim 2s infinite;
+    }
+
+    @keyframes pulse-emerald-anim {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+      70% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .float-icon {
+      animation: float-anim 4s ease-in-out infinite;
+    }
+
+    @keyframes float-anim {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+
+    .shimmer-bg {
+      background: linear-gradient(90deg, rgba(16,185,129,0.05) 0%, rgba(16,185,129,0.15) 50%, rgba(16,185,129,0.05) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 3s infinite linear;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .text-glow {
+      text-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+    }
+
+    .fade-transition {
+      transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+    }
+
+    /* Custom Custom Cursor */
+    body, a, button, select {
+      cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%2334d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>'), auto;
+    }
+
+    /* Click Bubble Animation Styles */
+    .click-bubble {
+      position: fixed;
+      pointer-events: none;
+      font-size: 20px;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      animation: rise-and-fade 1.2s forwards ease-out;
+    }
+
+    @keyframes rise-and-fade {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(0.6);
+      }
+      50% {
+        opacity: 0.9;
+        transform: translate(-50% + calc(var(--rand-x) * 20px), -50% - 60px) scale(1.1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50% + calc(var(--rand-x) * 40px), -50% - 130px) scale(0.9);
+      }
+    }
+
+    /* World Map Styles */
+    .land-path {
+      fill: #1e293b;
+      stroke: #334155;
+      stroke-width: 0.6px;
+      transition: fill 0.3s ease;
+    }
+    .land-path:hover {
+      fill: #273549;
+    }
+    .map-pulse-ring {
+      animation: map-ring-pulse 2s infinite ease-out;
+      transform-origin: center;
+      transform-box: fill-box;
+    }
+    @keyframes map-ring-pulse {
+      0% { transform: scale(1); opacity: 0.85; }
+      100% { transform: scale(3.2); opacity: 0; }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
+
+  <!-- Header Section -->
+  <header class="border-b border-slate-800 bg-slate-900/90 sticky top-0 z-40 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+          <i data-lucide="moon" class="w-6 h-6 text-slate-950 fill-slate-950"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-200 bg-clip-text text-transparent">
+            Global Live Adhan
+          </h1>
+          <p class="text-xs text-slate-400">Real-time Worldwide Islamic Prayer Tracker</p>
+        </div>
+      </div>
+
+      <!-- Navbar Live Local Clock -->
+      <div class="flex items-center space-x-2.5 bg-slate-800/80 border border-slate-700/80 px-3.5 py-1.5 rounded-xl">
+        <i data-lucide="clock" class="w-4 h-4 text-emerald-400"></i>
+        <div class="text-left">
+          <span class="block text-[9px] uppercase tracking-wider text-slate-400 font-semibold leading-none">Local Device Time</span>
+          <span id="navbarLocalClock" class="text-xs sm:text-sm font-mono font-bold text-slate-100">00:00:00 AM</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow space-y-6">
+
+    <!-- SECTION 1: Location & Calculation Selection Bar -->
+    <section class="glass-card p-5 rounded-2xl">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider opacity-75 mb-2 flex items-center space-x-1">
+            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Selected City / Region</span>
+          </label>
+          <div class="flex gap-2">
+            <select id="citySelect" class="bg-slate-900 border border-slate-700 text-slate-100 text-sm rounded-xl focus:ring-emerald-500 focus:border-emerald-500 block w-full p-3 transition outline-none">
+              <option value="Makkah,Saudi Arabia">🕌 Makkah, Saudi Arabia</option>
+              <option value="Madinah,Saudi Arabia">🕌 Madinah, Saudi Arabia</option>
+              <option value="Cairo,Egypt">🇪🇬 Cairo, Egypt</option>
+              <option value="Istanbul,Turkey">🇹🇷 Istanbul, Turkey</option>
+              <option value="London,UK">🇬🇧 London, United Kingdom</option>
+              <option value="New York,US">🇺🇸 New York, USA</option>
+              <option value="Jakarta,Indonesia">🇮🇩 Jakarta, Indonesia</option>
+              <option value="Tokyo,Japan">🇯🇵 Tokyo, Japan</option>
+              <option value="Sydney,Australia">🇦🇺 Sydney, Australia</option>
+              <option value="Dubai,UAE">🇦🇪 Dubai, UAE</option>
+              <option value="Kuala Lumpur,Malaysia">🇲🇾 Kuala Lumpur, Malaysia</option>
+              <option value="Toronto,Canada">🇨🇦 Toronto, Canada</option>
+              <option value="Karachi,Pakistan">🇵🇰 Karachi, Pakistan</option>
+              <option value="Dhaka,Bangladesh">🇧🇩 Dhaka, Bangladesh</option>
+            </select>
+            <button id="btnGeoLocation" type="button" title="Use GPS location" class="p-3 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-xl transition flex items-center justify-center">
+              <i data-lucide="crosshair" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider opacity-75 mb-2 flex items-center space-x-1">
+            <i data-lucide="sliders" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Calculation Method</span>
+          </label>
+          <select id="methodSelect" class="bg-slate-900 border border-slate-700 text-slate-100 text-sm rounded-xl focus:ring-emerald-500 focus:border-emerald-500 block w-full p-3 transition outline-none">
+            <option value="2">ISNA (North America)</option>
+            <option value="4">Muslim World League (MWL)</option>
+            <option value="5">Egyptian General Authority</option>
+            <option value="3">Umm Al-Qura University, Makkah</option>
+            <option value="1">University of Islamic Sciences, Karachi</option>
+            <option value="13">Diyanet (Turkey)</option>
+          </select>
+        </div>
+
+        <div class="flex items-center justify-between bg-slate-900/60 border border-slate-800 p-3 rounded-xl">
+          <div class="text-xs">
+            <span class="opacity-75 block font-medium">System Status</span>
+            <span id="currentCityLabel" class="text-emerald-400 font-bold">Makkah, Saudi Arabia</span>
+          </div>
+          <span class="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[11px] font-bold border border-emerald-500/30 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-emerald"></span> Live API
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: Side-by-Side Selected Region & Upcoming Prayer Dashboard -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- LEFT SIDE: Regional Live Local Time Card -->
+      <div class="glass-card-active p-5 rounded-2xl flex flex-col justify-between space-y-4 border-emerald-500/50">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/20 pb-3">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+              <i data-lucide="clock" class="w-4 h-4"></i> Regional Live Local Time
+            </span>
+            <div class="flex flex-wrap items-center gap-2.5 mt-1">
+              <h2 id="selectedCityTitle" class="text-xl font-extrabold">Makkah, Saudi Arabia</h2>
+              <!-- Dynamic 4-State Time of Day Badge -->
+              <span id="selectedCityDayNight" class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1.5">
+                <i data-lucide="sun" class="w-3.5 h-3.5"></i>
+                <span>☀️ Day</span>
+              </span>
+            </div>
+          </div>
+          <span id="selectedTimezone" class="text-xs px-3 py-1 rounded-full bg-slate-900/80 text-emerald-400 font-mono border border-slate-700">
+            Asia/Riyadh
+          </span>
+        </div>
+
+        <div class="py-2 flex flex-col sm:flex-row items-baseline justify-between gap-4">
+          <div>
+            <div id="selectedCityClock" class="text-4xl sm:text-5xl font-black font-mono text-glow tracking-tight">
+              00:00:00 AM
+            </div>
+            <p id="selectedCityDate" class="text-xs font-semibold opacity-75 mt-1">Loading regional local date...</p>
+          </div>
+
+          <!-- User Device Time Quick Widget -->
+          <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-right min-w-[170px]">
+            <div class="flex items-center justify-end space-x-1 mb-0.5">
+              <span class="text-[10px] opacity-75 font-semibold uppercase tracking-wider">Device Time</span>
+              <span id="userBrowserDayNight" class="text-[10px] text-amber-400 font-bold ml-1">☀️ Day</span>
+            </div>
+            <span id="userBrowserClock" class="text-sm font-mono font-bold opacity-90">00:00:00 AM</span>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-emerald-500/20 flex flex-wrap items-center justify-between text-xs gap-2">
+          <span class="flex items-center gap-1 text-emerald-300 font-medium">
+            <i data-lucide="info" class="w-3.5 h-3.5"></i>
+            Live time synchronized with local timezone
+          </span>
+          <span id="hijriDate" class="font-arabic font-bold text-emerald-400 text-sm">Loading Hijri...</span>
+        </div>
+      </div>
+
+      <!-- RIGHT SIDE: Next Upcoming Prayer Side-by-Side Card -->
+      <div id="heroCard" class="glass-card p-5 rounded-2xl flex flex-col justify-between border-emerald-500/50 relative overflow-hidden shimmer-bg">
+        <div class="absolute -right-8 -top-8 w-32 h-32 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none float-icon"></div>
+
+        <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
+          <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+            <i data-lucide="bell" class="w-4 h-4 text-emerald-400 animate-bounce"></i> Next Prayer Focus
+          </span>
+          <span class="text-xs font-mono font-bold bg-emerald-500/15 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/40 pulse-emerald shadow-lg shadow-emerald-500/10">
+            Active Countdown
+          </span>
+        </div>
+
+        <div class="py-2 flex items-center justify-between">
+          <div>
+            <div id="nextPrayerName" class="text-3xl sm:text-4xl font-black text-glow tracking-tight text-emerald-400 transition-all duration-300">
+              --
+            </div>
+            <div id="nextPrayerTime" class="text-xs font-semibold opacity-75 mt-1">
+              Scheduled at --:--
+            </div>
+          </div>
+
+          <div class="text-right">
+            <div class="flex items-center justify-end space-x-1 font-mono font-bold text-2xl sm:text-3xl tracking-tight">
+              <span id="countHours" class="bg-slate-900/80 px-2 py-1 rounded-lg border border-slate-800 shadow-inner">00</span>
+              <span class="text-emerald-400 animate-pulse">:</span>
+              <span id="countMins" class="bg-slate-900/80 px-2 py-1 rounded-lg border border-slate-800 shadow-inner">00</span>
+              <span class="text-emerald-400 animate-pulse">:</span>
+              <span id="countSecs" class="bg-slate-900/80 px-2 py-1 rounded-lg border border-slate-800 text-emerald-400 shadow-inner">00</span>
+            </div>
+            <span class="text-[10px] uppercase tracking-wider opacity-60 font-semibold block mt-1">Hours : Mins : Secs remaining</span>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs opacity-80">
+          <span>Calculation status:</span>
+          <span class="font-bold text-emerald-400 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-emerald"></span> Synchronized
+          </span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SECTION 3: Current Date Overview -->
+    <section class="glass-card p-5 rounded-2xl flex flex-col justify-between space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <span class="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+          <i data-lucide="calendar" class="w-4 h-4"></i> Current Date Overview
+        </span>
+        <span id="gregorianYear" class="text-xs font-mono font-bold opacity-75">2026</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <span class="text-[10px] opacity-75 font-semibold uppercase tracking-wider block">Gregorian Date</span>
+          <div id="gregorianDate" class="text-sm font-bold mt-1">Loading Gregorian Date...</div>
+        </div>
+        <div>
+          <span class="text-[10px] opacity-75 font-semibold uppercase tracking-wider block">Islamic Hijri Date</span>
+          <div id="hijriFullDate" class="text-sm font-arabic font-bold text-emerald-400 mt-1">Loading Hijri Calendar...</div>
+        </div>
+        <div>
+          <span class="text-[10px] opacity-75 font-semibold uppercase tracking-wider block">Day of Week</span>
+          <div id="weekdayLabel" class="text-sm font-bold mt-1">--</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: Daily Prayer Timings Table -->
+    <section class="glass-card rounded-2xl p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold flex items-center gap-2">
+          <i data-lucide="list" class="w-5 h-5 text-emerald-400"></i>
+          <span>Today's Prayer Schedule</span>
+        </h3>
+        <span class="text-xs opacity-75">Active/upcoming prayer highlighted</span>
+      </div>
+
+      <!-- Prayer Cards Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5" id="prayerGrid">
+        <!-- Dynamic prayer items injected via jQuery -->
+      </div>
+    </section>
+
+    <!-- SECTION 4.5: Quranic Wisdom Slideshow -->
+  <!-- Quranic Wisdom Slideshow -->
+  <section class="glass-card rounded-2xl p-6 space-y-4 border-emerald-500/20 relative overflow-hidden">
+      <div class="absolute -left-10 -bottom-10 w-40 h-40 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+      
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/30">
+            <i data-lucide="book-open" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold">Quranic Wisdom</h3>
+            <p class="text-xs text-slate-400">Reflections from The Holy Quran</p>
+          </div>
+        </div>
+        
+        <div class="flex items-center space-x-2">
+          <!-- Speech / TTS Button -->
+          <button id="btnSpeakQuote" type="button" title="Read Aloud with Voice" class="px-2.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg transition flex items-center space-x-1.5 text-xs font-semibold">
+            <i data-lucide="volume-2" class="w-3.5 h-3.5" id="speakIcon"></i>
+            <span id="speakLabel">Read Aloud</span>
+          </button>
+          <span id="slideCounter" class="text-xs font-mono bg-slate-900/80 px-2.5 py-1 rounded-full border border-slate-700 text-emerald-400">1 / 5</span>
+          <button id="btnTogglePlay" type="button" title="Pause/Play slideshow" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-lg transition">
+            <i data-lucide="pause" class="w-4 h-4" id="playPauseIcon"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Slideshow Container -->
+      <div id="quoteContainer" class="py-4 text-center space-y-4 min-h-[140px] flex flex-col justify-center fade-transition opacity-100">
+        <p id="quoteArabic" class="text-xl sm:text-2xl font-arabic text-emerald-300 leading-relaxed px-4 float-icon">
+          "إِنَّ مَعَ الْعُسْرِ يُسْرًا"
+        </p>
+        <p id="quoteEnglish" class="text-sm sm:text-base font-medium text-slate-200 max-w-2xl mx-auto italic">
+          "Indeed, with hardship comes ease."
+        </p>
+        <span id="quoteRef" class="text-xs font-bold text-emerald-400 uppercase tracking-wider block">
+          — Surah Al-Inshirah (94:6)
+        </span>
+      </div>
+
+      <!-- Navigation Controls -->
+      <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
+        <button id="btnPrevQuote" type="button" class="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center space-x-1">
+          <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+          <span>Previous</span>
+        </button>
+
+        <div id="slideDots" class="flex space-x-1.5">
+          <!-- Dots injected via jQuery -->
+        </div>
+
+        <button id="btnNextQuote" type="button" class="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center space-x-1">
+          <span>Next</span>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- SECTION 5: Global Live Prayer Status Monitor -->
+    <section class="glass-card rounded-2xl p-5 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h3 class="text-base font-bold flex items-center gap-2">
+            <i data-lucide="globe" class="w-5 h-5 text-emerald-400"></i>
+            <span>Global Live Prayer Watch</span>
+          </h3>
+          <p class="text-xs opacity-75">Real-time prayer status, live local time, and 4-state time of day across global hubs</p>
+        </div>
+        <div class="flex items-center space-x-3 text-xs">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Live / Next</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-700"></span> Scheduled</span>
+        </div>
+      </div>
+
+      <!-- Global Cities Cards Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="globalGrid">
+        <!-- Injected via jQuery -->
+      </div>
+    </section>
+
+    <!-- SECTION 6: Interactive Global Live Adhan World Map -->
+    <section class="glass-card rounded-2xl p-5 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-bold flex items-center gap-2">
+            <i data-lucide="map" class="w-5 h-5 text-emerald-400"></i>
+            <span>Global Live Adhan World Map</span>
+          </h3>
+          <p class="text-xs opacity-75">Real-time geographical prayer pulse &bull; Click any hub pin to switch city</p>
+        </div>
+        <div class="flex items-center space-x-4 text-xs">
+          <span class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-emerald"></span>
+            <span class="text-emerald-300 font-semibold">Prayer / Adhan Window</span>
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-teal-400"></span>
+            <span class="opacity-80">Monitored Hub</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Responsive SVG Map Wrapper -->
+      <div id="worldMapWrapper" class="relative w-full h-[320px] sm:h-[420px] bg-slate-950/90 rounded-xl border border-slate-800 overflow-hidden">
+        <div id="mapLoadingOverlay" class="absolute inset-0 flex items-center justify-center text-xs text-emerald-400 font-mono bg-slate-950/80 z-10">
+          Loading interactive world vector map...
+        </div>
+        <svg id="worldMapSvg" class="w-full h-full block cursor-grab active:cursor-grabbing"></svg>
+
+        <!-- Map Zoom Controls -->
+        <div class="absolute bottom-3 right-3 z-20 flex flex-col gap-1.5 bg-slate-900/90 border border-slate-700/80 p-1.5 rounded-xl backdrop-blur-md shadow-lg">
+          <button id="btnMapZoomIn" type="button" title="Zoom In" class="p-2 bg-slate-800 hover:bg-emerald-500/20 text-slate-200 hover:text-emerald-400 rounded-lg transition flex items-center justify-center">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+          </button>
+          <button id="btnMapZoomOut" type="button" title="Zoom Out" class="p-2 bg-slate-800 hover:bg-emerald-500/20 text-slate-200 hover:text-emerald-400 rounded-lg transition flex items-center justify-center">
+            <i data-lucide="minus" class="w-4 h-4"></i>
+          </button>
+          <button id="btnMapZoomReset" type="button" title="Reset Map View" class="p-2 bg-slate-800 hover:bg-emerald-500/20 text-slate-200 hover:text-emerald-400 rounded-lg transition flex items-center justify-center border-t border-slate-700/60 pt-2">
+            <i data-lucide="maximize-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+        
+        <!-- Hover Tooltip -->
+        <div id="mapTooltip" class="hidden absolute z-20 pointer-events-none bg-slate-900/95 border border-emerald-500/40 px-3 py-2 rounded-xl shadow-xl text-xs backdrop-blur-md">
+          <div id="tooltipCity" class="font-bold text-slate-100"></div>
+          <div id="tooltipTime" class="font-mono text-emerald-400 text-[11px] mt-0.5"></div>
+          <div id="tooltipNext" class="text-[10px] text-slate-300 mt-0.5"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 bg-slate-900/60 py-4 mt-8">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs opacity-75 flex flex-col sm:flex-row justify-between items-center gap-2">
+      <p>Powered by <a href="https://aladhan.com/prayer-times-api" target="_blank" class="text-emerald-400 hover:underline">AlAdhan API</a> &bull; Interactive Global Adhan Web Application</p>
+      <p>Global Call to Prayer Network</p>
+    </div>
+  </footer>
+
+  <!-- Application Logic JavaScript (jQuery) -->
+  <script>
+    $(document).ready(function () {
+      // Initialize Lucide Icons
+      lucide.createIcons();
+
+      // State Variables
+      let currentTimings = null;
+      let selectedTimezoneStr = "UTC";
+      let nextPrayerTarget = null;
+      let activePrayerName = "";
+
+      // Global hubs with exact geographic coordinates
+      const globalHubs = [
+        { city: "Makkah", country: "Saudi Arabia", flag: "🇸🇦", region: "Middle East", lat: 21.3891, lng: 39.8579 },
+        { city: "Madinah", country: "Saudi Arabia", flag: "🇸🇦", region: "Middle East", lat: 24.5247, lng: 39.5692 },
+        { city: "Cairo", country: "Egypt", flag: "🇪🇬", region: "North Africa", lat: 30.0444, lng: 31.2357 },
+        { city: "Istanbul", country: "Turkey", flag: "🇹🇷", region: "Eurasia", lat: 41.0082, lng: 28.9784 },
+        { city: "London", country: "UK", flag: "🇬🇧", region: "Europe", lat: 51.5074, lng: -0.1278 },
+        { city: "New York", country: "US", flag: "🇺🇸", region: "North America", lat: 40.7128, lng: -74.0060 },
+        { city: "Jakarta", country: "Indonesia", flag: "🇮🇩", region: "Southeast Asia", lat: -6.2088, lng: 106.8456 },
+        { city: "Tokyo", country: "Japan", flag: "🇯🇵", region: "East Asia", lat: 35.6762, lng: 139.6503 },
+        { city: "Sydney", country: "Australia", flag: "🇦🇺", region: "Oceania", lat: -33.8688, lng: 151.2093 },
+        { city: "Dubai", country: "UAE", flag: "🇦🇪", region: "Middle East", lat: 25.2048, lng: 55.2708 },
+        { city: "Dhaka", country: "Bangladesh", flag: "🇧🇩", region: "South Asia", lat: 23.8103, lng: 90.4125 },
+        { city: "Paris", country: "France", flag: "🇫🇷", region: "Europe", lat: 48.8566, lng: 2.3522 },
+        { city: "Berlin", country: "Germany", flag: "🇩🇪", region: "Europe", lat: 52.5200, lng: 13.4050 },
+        { city: "Casablanca", country: "Morocco", flag: "🇲🇦", region: "North Africa", lat: 33.5731, lng: -7.5898 },
+        { city: "Islamabad", country: "Pakistan", flag: "🇵🇰", region: "South Asia", lat: 33.6844, lng: 73.0479 },
+        { city: "Kuala Lumpur", country: "Malaysia", flag: "🇲🇾", region: "Southeast Asia", lat: 3.1390, lng: 101.6869 },
+        { city: "Toronto", country: "Canada", flag: "🇨🇦", region: "North America", lat: 43.6532, lng: -79.3832 }
+      ];
+
+      // API Handlers
+      $('#citySelect, #methodSelect').on('change', function () {
+        fetchPrayerTimesByCity();
+      });
+
+      $('#btnGeoLocation').on('click', function () {
+        if (navigator.geolocation) {
+          $('#currentCityLabel').text('Fetching location...');
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              fetchPrayerTimesByCoords(position.coords.latitude, position.coords.longitude);
+            },
+            (error) => {
+              alert("Unable to fetch location. Displaying selected city.");
+              fetchPrayerTimesByCity();
+            }
+          );
+        } else {
+          alert("Geolocation is not supported by your browser.");
+        }
+      });
+
+      function fetchPrayerTimesByCity() {
+        const val = $('#citySelect').val().split(',');
+        const city = val[0].trim();
+        const country = val[1].trim();
+        const method = $('#methodSelect').val();
+
+        $('#currentCityLabel').text(`${city}, ${country}`);
+        $('#selectedCityTitle').text(`${city}, ${country}`);
+
+        $.ajax({
+          url: `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=${method}`,
+          method: 'GET',
+          success: function (res) {
+            if (res.code === 200) {
+              processPrayerData(res.data);
+            }
+          },
+          error: function () {
+            $('#currentCityLabel').text("API Error loading data.");
+          }
+        });
+      }
+
+      function fetchPrayerTimesByCoords(lat, lng) {
+        const method = $('#methodSelect').val();
+        $.ajax({
+          url: `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=${method}`,
+          method: 'GET',
+          success: function (res) {
+            if (res.code === 200) {
+              const locationStr = `GPS (${lat.toFixed(2)}, ${lng.toFixed(2)})`;
+              $('#currentCityLabel').text(locationStr);
+              $('#selectedCityTitle').text(locationStr);
+              processPrayerData(res.data);
+            }
+          }
+        });
+      }
+
+      function processPrayerData(data) {
+        currentTimings = data.timings;
+        const dateData = data.date;
+        const meta = data.meta;
+
+        selectedTimezoneStr = meta.timezone || "UTC";
+        $('#selectedTimezone').text(selectedTimezoneStr);
+
+        $('#gregorianDate').text(`${dateData.gregorian.day} ${dateData.gregorian.month.en} ${dateData.gregorian.year}`);
+        $('#gregorianYear').text(dateData.gregorian.year);
+        $('#weekdayLabel').text(dateData.gregorian.weekday.en);
+        $('#hijriDate').text(`${dateData.hijri.day} ${dateData.hijri.month.en} ${dateData.hijri.year} AH`);
+        $('#hijriFullDate').text(`${dateData.hijri.day} ${dateData.hijri.month.en} (${dateData.hijri.month.ar}), ${dateData.hijri.year} AH`);
+
+        renderPrayerGrid(currentTimings);
+        updateNextPrayerState();
+        fetchGlobalHubsData();
+      }
+
+      function renderPrayerGrid(timings) {
+        const mainPrayers = [
+          { key: 'Fajr', label: 'Fajr', icon: 'sunrise' },
+          { key: 'Sunrise', label: 'Sunrise', icon: 'sun' },
+          { key: 'Dhuhr', label: 'Dhuhr', icon: 'sun' },
+          { key: 'Asr', label: 'Asr', icon: 'cloud-sun' },
+          { key: 'Maghrib', label: 'Maghrib', icon: 'sunset' },
+          { key: 'Isha', label: 'Isha', icon: 'moon' }
+        ];
+
+        let html = '';
+        mainPrayers.forEach(item => {
+          const rawTime = timings[item.key];
+          const formattedTime = format12Hour(rawTime);
+
+          html += `
+            <div id="card-${item.key}" class="prayer-card glass-card p-4 rounded-xl border transition-all duration-300 flex flex-col justify-between space-y-2">
+              <div class="flex items-center justify-between opacity-75">
+                <span class="text-xs font-semibold uppercase tracking-wider">${item.label}</span>
+                <i data-lucide="${item.icon}" class="w-4 h-4 text-emerald-400"></i>
+              </div>
+              <div>
+                <div class="text-lg font-bold font-mono">${formattedTime}</div>
+                <div class="text-[10px] opacity-60">${cleanTimeStr(rawTime)} 24h</div>
+              </div>
+            </div>
+          `;
+        });
+
+        $('#prayerGrid').html(html);
+        lucide.createIcons();
+      }
+
+      function cleanTimeStr(timeStr) {
+        if (!timeStr) return "00:00";
+        return timeStr.split(' ')[0].trim();
+      }
+
+      function format12Hour(timeStr) {
+        if (!timeStr) return "--:--";
+        const clean = cleanTimeStr(timeStr);
+        const parts = clean.split(':');
+        let hours = parseInt(parts[0], 10);
+        const minutes = parts[1];
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${hours}:${minutes} ${ampm}`;
+      }
+
+      function timeToMinutes(timeStr) {
+        const clean = cleanTimeStr(timeStr);
+        const parts = clean.split(':');
+        return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+      }
+
+      // 4-State Time-of-Day Astronomical Calculator (Morning, Day, Noon, Evening, Night)
+      function calculateTimeOfDayStatus(currentMinutes, timings) {
+        if (!timings || !timings.Fajr || !timings.Sunrise || !timings.Dhuhr || !timings.Asr || !timings.Maghrib || !timings.Isha) {
+          const h = Math.floor(currentMinutes / 60);
+          if (h >= 5 && h < 7) return { label: '🌅 Morning', icon: 'sunrise', colorClass: 'bg-amber-500/10 text-amber-500 border-amber-500/30' };
+          if (h >= 7 && h < 11) return { label: '☀️ Day', icon: 'sun', colorClass: 'bg-amber-500/10 text-amber-500 border-amber-500/30' };
+          if (h >= 11 && h < 14) return { label: '🌇 Noon', icon: 'sun-medium', colorClass: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30' };
+          if (h >= 14 && h < 19) return { label: '🌆 Evening', icon: 'sunset', colorClass: 'bg-orange-500/10 text-orange-500 border-orange-500/30' };
+          return { label: '🌙 Night', icon: 'moon', colorClass: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' };
+        }
+
+        const fajrM = timeToMinutes(timings.Fajr);
+        const sunriseM = timeToMinutes(timings.Sunrise);
+        const dhuhrM = timeToMinutes(timings.Dhuhr);
+        const asrM = timeToMinutes(timings.Asr);
+        const maghribM = timeToMinutes(timings.Maghrib);
+        const ishaM = timeToMinutes(timings.Isha);
+
+        if (currentMinutes >= fajrM && currentMinutes < sunriseM) {
+          return { label: '🌅 Morning', icon: 'sunrise', colorClass: 'bg-amber-500/10 text-amber-500 border-amber-500/30' };
+        }
+        if (currentMinutes >= sunriseM && currentMinutes < (dhuhrM - 30)) {
+          return { label: '☀️ Day', icon: 'sun', colorClass: 'bg-amber-500/10 text-amber-500 border-amber-500/30' };
+        }
+        if (currentMinutes >= (dhuhrM - 30) && currentMinutes < (dhuhrM + 45)) {
+          return { label: '🌇 Noon', icon: 'sun-medium', colorClass: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30' };
+        }
+        if (currentMinutes >= (dhuhrM + 45) && currentMinutes < ishaM) {
+          return { label: '🌆 Evening', icon: 'sunset', colorClass: 'bg-orange-500/10 text-orange-500 border-orange-500/30' };
+        }
+        return { label: '🌙 Night', icon: 'moon', colorClass: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' };
+      }
+
+      function updateDayNightIndicators(cityNow) {
+        if (currentTimings) {
+          const cityCurrentMinutes = cityNow.getHours() * 60 + cityNow.getMinutes();
+          const cityStatus = calculateTimeOfDayStatus(cityCurrentMinutes, currentTimings);
+          
+          $('#selectedCityDayNight')
+            .html(`<i data-lucide="${cityStatus.icon}" class="w-3.5 h-3.5"></i><span>${cityStatus.label}</span>`)
+            .attr('class', `px-2.5 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 ${cityStatus.colorClass}`);
+        }
+
+        const userNow = new Date();
+        const userCurrentMinutes = userNow.getHours() * 60 + userNow.getMinutes();
+        const userStatus = calculateTimeOfDayStatus(userCurrentMinutes, currentTimings);
+        
+        $('#userBrowserDayNight')
+          .html(`${userStatus.label}`)
+          .attr('class', `text-[10px] font-bold ml-1 ${userStatus.colorClass.split(' ')[1]}`);
+
+        lucide.createIcons();
+      }
+
+      function getSelectedCityNowDate() {
+        try {
+          const nowStr = new Date().toLocaleString("en-US", { timeZone: selectedTimezoneStr });
+          return new Date(nowStr);
+        } catch (e) {
+          return new Date();
+        }
+      }
+
+      function updateNextPrayerState() {
+        if (!currentTimings) return;
+
+        const cityNow = getSelectedCityNowDate();
+        const prayerKeys = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+
+        let upcoming = null;
+        let upcomingTime = null;
+
+        for (let key of prayerKeys) {
+          const cleanTime = cleanTimeStr(currentTimings[key]);
+          const parts = cleanTime.split(':');
+          const pDate = new Date(cityNow);
+          pDate.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+
+          if (pDate > cityNow) {
+            upcoming = key;
+            upcomingTime = pDate;
+            break;
+          }
+        }
+
+        if (!upcoming) {
+          upcoming = 'Fajr';
+          const cleanTime = cleanTimeStr(currentTimings['Fajr']);
+          const parts = cleanTime.split(':');
+          const tomorrow = new Date(cityNow);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          tomorrow.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+          upcomingTime = tomorrow;
+        }
+
+        nextPrayerTarget = upcomingTime;
+        activePrayerName = upcoming;
+
+        $('#nextPrayerName').text(upcoming);
+        $('#nextPrayerTime').text(format12Hour(currentTimings[upcoming]));
+
+        $('.prayer-card').removeClass('glass-card-active border-emerald-500/80').addClass('glass-card');
+        $(`#card-${upcoming}`).removeClass('glass-card').addClass('glass-card-active border-emerald-500/80');
+      }
+
+      function tick() {
+        const cityNow = getSelectedCityNowDate();
+        const cityTimeString = cityNow.toLocaleTimeString("en-US", { hour12: true });
+        const cityDateString = cityNow.toLocaleDateString("en-US", { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+
+        $('#selectedCityClock').text(cityTimeString);
+        $('#selectedCityDate').text(`${cityDateString}`);
+
+        const userNow = new Date();
+        const localTimeStr = userNow.toLocaleTimeString("en-US", { hour12: true });
+        $('#userBrowserClock').text(localTimeStr);
+        $('#navbarLocalClock').text(localTimeStr);
+
+        updateDayNightIndicators(cityNow);
+
+        if (nextPrayerTarget) {
+          const diff = nextPrayerTarget - cityNow;
+          if (diff <= 0) {
+            updateNextPrayerState();
+          } else {
+            const h = Math.floor(diff / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+            $('#countHours').text(String(h).padStart(2, '0'));
+            $('#countMins').text(String(m).padStart(2, '0'));
+            $('#countSecs').text(String(s).padStart(2, '0'));
+          }
+        }
+      }
+
+      function fetchGlobalHubsData() {
+        $('#globalGrid').empty();
+        globalHubStatuses = {};
+
+        globalHubs.forEach(hub => {
+          $.ajax({
+            url: `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(hub.city)}&country=${encodeURIComponent(hub.country)}&method=2`,
+            method: 'GET',
+            success: function (res) {
+              if (res.code === 200) {
+                renderGlobalHubCard(hub, res.data.timings, res.data.meta.timezone);
+              }
+            }
+          });
+        });
+      }
+
+      let globalHubStatuses = {};
+      let mapSvg = null;
+      let mapProjection = null;
+      let mapPinsGroup = null;
+      let mapZoomBehavior = null;
+      let mapContainerGroup = null;
+
+      function initWorldMap() {
+        const container = document.getElementById('worldMapWrapper');
+        if (!container) return;
+
+        const width = container.clientWidth || 800;
+        const height = container.clientHeight || 400;
+
+        mapSvg = d3.select('#worldMapSvg')
+          .attr('viewBox', `0 0 ${width} ${height}`)
+          .attr('preserveAspectRatio', 'xMidYMid meet');
+
+        mapSvg.selectAll('*').remove();
+
+        mapProjection = d3.geoNaturalEarth1()
+          .scale(width / 5.6)
+          .translate([width / 2, height / 1.85]);
+
+        const pathGenerator = d3.geoPath().projection(mapProjection);
+
+        mapContainerGroup = mapSvg.append('g').attr('class', 'map-zoom-container');
+        const gMap = mapContainerGroup.append('g');
+        mapPinsGroup = mapContainerGroup.append('g').attr('class', 'pins-layer');
+
+        // Configure D3 Zoom & Pan Behavior
+        mapZoomBehavior = d3.zoom()
+          .scaleExtent([1, 8])
+          .translateExtent([[0, 0], [width, height]])
+          .on('zoom', (event) => {
+            mapContainerGroup.attr('transform', event.transform);
+            // Keep marker pins visually proportional when zooming in
+            const k = event.transform.k;
+            mapPinsGroup.selectAll('circle.core-dot').attr('r', function () {
+              const baseR = parseFloat(d3.select(this).attr('data-base-r')) || 4;
+              return baseR / Math.pow(k, 0.45);
+            });
+            mapPinsGroup.selectAll('circle.map-pulse-ring').attr('r', 7 / Math.pow(k, 0.45));
+          });
+
+        mapSvg.call(mapZoomBehavior);
+
+        // Bind Zoom Buttons
+        $('#btnMapZoomIn').off('click').on('click', function () {
+          mapSvg.transition().duration(300).call(mapZoomBehavior.scaleBy, 1.6);
+        });
+
+        $('#btnMapZoomOut').off('click').on('click', function () {
+          mapSvg.transition().duration(300).call(mapZoomBehavior.scaleBy, 0.625);
+        });
+
+        $('#btnMapZoomReset').off('click').on('click', function () {
+          mapSvg.transition().duration(400).call(mapZoomBehavior.transform, d3.zoomIdentity);
+        });
+
+        // Load lightweight world TopoJSON (no API key required)
+        d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+          .then(worldData => {
+            $('#mapLoadingOverlay').fadeOut(300);
+            const countries = topojson.feature(worldData, worldData.objects.countries);
+
+            gMap.selectAll('path')
+              .data(countries.features)
+              .enter()
+              .append('path')
+              .attr('d', pathGenerator)
+              .attr('class', 'land-path');
+
+            updateWorldMapPins();
+          })
+          .catch(() => {
+            $('#mapLoadingOverlay').text('Unable to load map geometry. Check network connection.');
+          });
+      }
+
+      function updateWorldMapPins() {
+        if (!mapPinsGroup || !mapProjection) return;
+
+        mapPinsGroup.selectAll('*').remove();
+
+        const currentTransform = mapSvg ? d3.zoomTransform(mapSvg.node()) : d3.zoomIdentity;
+        const scaleFactor = Math.pow(currentTransform.k || 1, 0.45);
+
+        globalHubs.forEach(hub => {
+          const coords = mapProjection([hub.lng, hub.lat]);
+          if (!coords) return;
+
+          const status = globalHubStatuses[hub.city] || {
+            isActiveAdhan: false,
+            localTime: '--:--',
+            nextPrayer: 'Scheduled',
+            nextTime: '--:--'
+          };
+
+          const pinGroup = mapPinsGroup.append('g')
+            .attr('transform', `translate(${coords[0]}, ${coords[1]})`)
+            .style('cursor', 'pointer')
+            .on('mouseenter', function () {
+              const $tooltip = $('#mapTooltip');
+              const t = d3.zoomTransform(mapSvg.node());
+              const screenX = t.applyX(coords[0]);
+              const screenY = t.applyY(coords[1]);
+
+              $('#tooltipCity').text(`${hub.flag} ${hub.city}, ${hub.country}`);
+              $('#tooltipTime').text(`Local Time: ${status.localTime}`);
+              $('#tooltipNext').html(
+                status.isActiveAdhan
+                  ? `<span class="text-emerald-400 font-bold">● Live Prayer Window (${status.nextPrayer})</span>`
+                  : `Next: ${status.nextPrayer} (${status.nextTime})`
+              );
+
+              const wrapper = $('#worldMapWrapper');
+              const maxLeft = wrapper.width() - 190;
+              const leftPos = Math.min(Math.max(screenX + 12, 10), maxLeft);
+              const topPos = Math.max(screenY - 45, 10);
+
+              $tooltip.css({ left: `${leftPos}px`, top: `${topPos}px` }).removeClass('hidden');
+            })
+            .on('mouseleave', function () {
+              $('#mapTooltip').addClass('hidden');
+            })
+            .on('click', function () {
+              const targetVal = `${hub.city},${hub.country}`;
+              if ($(`#citySelect option[value="${targetVal}"]`).length > 0) {
+                $('#citySelect').val(targetVal).trigger('change');
+              } else {
+                $('#citySelect').append(`<option value="${targetVal}">${hub.flag} ${hub.city}, ${hub.country}</option>`);
+                $('#citySelect').val(targetVal).trigger('change');
+              }
+            });
+
+          // Pulsing emerald halo for active prayer windows
+          if (status.isActiveAdhan) {
+            pinGroup.append('circle')
+              .attr('r', 7 / scaleFactor)
+              .attr('fill', 'rgba(16, 185, 129, 0.45)')
+              .attr('class', 'map-pulse-ring');
+          }
+
+          // Core dot
+          const baseRadius = status.isActiveAdhan ? 4.8 : 3.6;
+          pinGroup.append('circle')
+            .attr('class', 'core-dot')
+            .attr('data-base-r', baseRadius)
+            .attr('r', baseRadius / scaleFactor)
+            .attr('fill', status.isActiveAdhan ? '#34d399' : '#2dd4bf')
+            .attr('stroke', '#0f172a')
+            .attr('stroke-width', 1.2 / scaleFactor);
+        });
+      }
+
+      function updateWorldMapPins() {
+        if (!mapPinsGroup || !mapProjection) return;
+
+        mapPinsGroup.selectAll('*').remove();
+
+        globalHubs.forEach(hub => {
+          const coords = mapProjection([hub.lng, hub.lat]);
+          if (!coords) return;
+
+          const status = globalHubStatuses[hub.city] || {
+            isActiveAdhan: false,
+            localTime: '--:--',
+            nextPrayer: 'Scheduled',
+            nextTime: '--:--'
+          };
+
+          const pinGroup = mapPinsGroup.append('g')
+            .attr('transform', `translate(${coords[0]}, ${coords[1]})`)
+            .style('cursor', 'pointer')
+            .on('mouseenter', function () {
+              const $tooltip = $('#mapTooltip');
+              $('#tooltipCity').text(`${hub.flag} ${hub.city}, ${hub.country}`);
+              $('#tooltipTime').text(`Local Time: ${status.localTime}`);
+              $('#tooltipNext').html(
+                status.isActiveAdhan
+                  ? `<span class="text-emerald-400 font-bold">● Live Prayer Window (${status.nextPrayer})</span>`
+                  : `Next: ${status.nextPrayer} (${status.nextTime})`
+              );
+
+              const wrapper = $('#worldMapWrapper');
+              const maxLeft = wrapper.width() - 190;
+              const leftPos = Math.min(Math.max(coords[0] + 12, 10), maxLeft);
+              const topPos = Math.max(coords[1] - 45, 10);
+
+              $tooltip.css({ left: `${leftPos}px`, top: `${topPos}px` }).removeClass('hidden');
+            })
+            .on('mouseleave', function () {
+              $('#mapTooltip').addClass('hidden');
+            })
+            .on('click', function () {
+              const targetVal = `${hub.city},${hub.country}`;
+              if ($(`#citySelect option[value="${targetVal}"]`).length > 0) {
+                $('#citySelect').val(targetVal).trigger('change');
+              } else {
+                $('#citySelect').append(`<option value="${targetVal}">${hub.flag} ${hub.city}, ${hub.country}</option>`);
+                $('#citySelect').val(targetVal).trigger('change');
+              }
+            });
+
+          // Pulsing emerald halo for active prayer windows
+          if (status.isActiveAdhan) {
+            pinGroup.append('circle')
+              .attr('r', 7)
+              .attr('fill', 'rgba(16, 185, 129, 0.45)')
+              .attr('class', 'map-pulse-ring');
+          }
+
+          // Core dot
+          pinGroup.append('circle')
+            .attr('r', status.isActiveAdhan ? 4.8 : 3.6)
+            .attr('fill', status.isActiveAdhan ? '#34d399' : '#2dd4bf')
+            .attr('stroke', '#0f172a')
+            .attr('stroke-width', 1.2);
+        });
+      }
+
+      $(window).on('resize', function () {
+        initWorldMap();
+      });
+
+      function renderGlobalHubCard(hub, timings, timezone) {
+        let cityNow = new Date();
+        try {
+          cityNow = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
+        } catch (e) {}
+
+        const prayers = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+        let nextP = 'Fajr';
+        let nextPTime = timings['Fajr'];
+        let isNearAdhan = false;
+
+        const nowMins = cityNow.getHours() * 60 + cityNow.getMinutes();
+
+        for (let p of prayers) {
+          const pMins = timeToMinutes(timings[p]);
+          // Within 25 mins after Adhan starts counts as active prayer window
+          if (nowMins >= pMins && nowMins <= pMins + 25) {
+            isNearAdhan = true;
+          }
+
+          const parts = cleanTimeStr(timings[p]).split(':');
+          const pDate = new Date(cityNow);
+          pDate.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+
+          if (pDate > cityNow) {
+            nextP = p;
+            nextPTime = timings[p];
+            break;
+          }
+        }
+
+        const cityTimeString = cityNow.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' });
+        const cityMinutes = cityNow.getHours() * 60 + cityNow.getMinutes();
+        const timeOfDayObj = calculateTimeOfDayStatus(cityMinutes, timings);
+
+        globalHubStatuses[hub.city] = {
+          isActiveAdhan: isNearAdhan,
+          localTime: cityTimeString,
+          nextPrayer: nextP,
+          nextTime: format12Hour(nextPTime)
+        };
+        updateWorldMapPins();
+
+        const cardHtml = `
+          <div class="glass-card p-3.5 rounded-xl flex items-center justify-between border transition">
+            <div class="flex items-center space-x-3">
+              <span class="text-2xl">${hub.flag}</span>
+              <div>
+                <div class="flex items-center space-x-1">
+                  <h4 class="text-sm font-bold">${hub.city}</h4>
+                  <span class="text-[10px] ml-1">${timeOfDayObj.label.split(' ')[0]}</span>
+                </div>
+                <p class="text-[11px] text-emerald-400 font-mono font-medium">${cityTimeString}</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">
+                Next: ${nextP}
+              </span>
+              <div class="text-xs font-mono mt-1 opacity-90">${format12Hour(nextPTime)}</div>
+            </div>
+          </div>
+        `;
+
+        $('#globalGrid').append(cardHtml);
+        lucide.createIcons();
+      }
+
+      // Quranic Slideshow Logic
+      const quranQuotes = [
+        {
+          arabic: "إِنَّ مَعَ الْعُسْرِ يُسْرًا",
+          english: "Indeed, with hardship comes ease.",
+          ref: "Surah Al-Inshirah (94:6)"
+        },
+        {
+          arabic: "فَاذْكُرُونِي أَذْكُرْكُمْ وَاشْكُرُوا لِي وَلَا تَكْفُرُونِ",
+          english: "So remember Me; I will remember you. And be grateful to Me and do not deny Me.",
+          ref: "Surah Al-Baqarah (2:152)"
+        },
+        {
+          arabic: "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ",
+          english: "Unquestionably, by the remembrance of Allah hearts are assured.",
+          ref: "Surah Ar-Ra'd (13:28)"
+        },
+        {
+          arabic: "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ",
+          english: "Our Lord, give us in this world [that which is] good and in the hereafter [that which is] good and protect us from the punishment of the Fire.",
+          ref: "Surah Al-Baqarah (2:201)"
+        },
+        {
+          arabic: "وَتَوَكَّلْ عَلَى الْحَيِّ الَّذِي لَا يَمُوتُ",
+          english: "And rely upon the Ever-Living who does not die.",
+          ref: "Surah Al-Furqan (25:58)"
+        }
+      ];
+
+      let currentQuoteIndex = 0;
+      let quoteTimer = null;
+      let isPlayingQuotes = true;
+
+      function initQuoteSlideshow() {
+        renderQuoteDots();
+        showQuote(currentQuoteIndex);
+        startQuoteTimer();
+
+        $('#btnNextQuote').on('click', function () {
+          window.speechSynthesis && window.speechSynthesis.cancel();
+          currentQuoteIndex = (currentQuoteIndex + 1) % quranQuotes.length;
+          showQuote(currentQuoteIndex);
+          resetQuoteTimer();
+        });
+
+        $('#btnPrevQuote').on('click', function () {
+          window.speechSynthesis && window.speechSynthesis.cancel();
+          currentQuoteIndex = (currentQuoteIndex - 1 + quranQuotes.length) % quranQuotes.length;
+          showQuote(currentQuoteIndex);
+          resetQuoteTimer();
+        });
+
+        $('#btnTogglePlay').on('click', function () {
+          isPlayingQuotes = !isPlayingQuotes;
+          const iconEl = $('#playPauseIcon');
+          if (isPlayingQuotes) {
+            iconEl.attr('data-lucide', 'pause');
+            startQuoteTimer();
+          } else {
+            iconEl.attr('data-lucide', 'play');
+            clearInterval(quoteTimer);
+          }
+        });
+
+        $('#btnSpeakQuote').on('click', function () {
+          if (!window.speechSynthesis) {
+            alert("Speech synthesis is not supported by your browser.");
+            return;
+          }
+
+          window.speechSynthesis.cancel();
+          const q = quranQuotes[currentQuoteIndex];
+          const textToSpeak = `${q.arabic}. ${q.english}`;
+          const utterance = new SpeechSynthesisUtterance(textToSpeak);
+          
+          utterance.rate = 0.78;
+          utterance.pitch = 0.82;
+          utterance.volume = 1.0;
+
+          const voices = window.speechSynthesis.getVoices();
+          const calmVoice = voices.find(v => v.name.includes('Natural') || v.name.includes('Google') || v.lang.startsWith('en')) || voices[0];
+          if (calmVoice) {
+            utterance.voice = calmVoice;
+          }
+
+          $('#speakLabel').text('Reciting...');
+          $('#speakIcon').addClass('animate-spin');
+
+          utterance.onend = function () {
+            $('#speakLabel').text('Read Aloud');
+            $('#speakIcon').removeClass('animate-spin');
+          };
+
+          utterance.onerror = function () {
+            $('#speakLabel').text('Read Aloud');
+            $('#speakIcon').removeClass('animate-spin');
+          };
+
+          window.speechSynthesis.speak(utterance);
+        });
+      }
+
+      function renderQuoteDots() {
+        let dotsHtml = '';
+        quranQuotes.forEach((_, idx) => {
+          dotsHtml += `<button type="button" class="quote-dot w-2 h-2 rounded-full transition-all ${idx === currentQuoteIndex ? 'bg-emerald-400 w-5' : 'bg-slate-700'}" data-index="${idx}"></button>`;
+        });
+        $('#slideDots').html(dotsHtml);
+
+        $('.quote-dot').on('click', function () {
+          window.speechSynthesis && window.speechSynthesis.cancel();
+          currentQuoteIndex = parseInt($(this).attr('data-index'), 10);
+          showQuote(currentQuoteIndex);
+          resetQuoteTimer();
+        });
+      }
+
+      function showQuote(index) {
+        const q = quranQuotes[index];
+        $('#quoteContainer').css({ 'opacity': 0, 'transform': 'translateY(10px)' });
+        setTimeout(() => {
+          $('#quoteArabic').text(`"${q.arabic}"`);
+          $('#quoteEnglish').text(`"${q.english}"`);
+          $('#quoteRef').text(`— ${q.ref}`);
+          $('#slideCounter').text(`${index + 1} / ${quranQuotes.length}`);
+          
+          $('.quote-dot').removeClass('bg-emerald-400 w-5').addClass('bg-slate-700 w-2');
+          $(`.quote-dot[data-index="${index}"]`).removeClass('bg-slate-700 w-2').addClass('bg-emerald-400 w-5');
+
+          $('#quoteContainer').css({ 'opacity': 1, 'transform': 'translateY(0)' });
+        }, 300);
+      }
+
+      function startQuoteTimer() {
+        clearInterval(quoteTimer);
+        if (isPlayingQuotes) {
+          quoteTimer = setInterval(() => {
+            currentQuoteIndex = (currentQuoteIndex + 1) % quranQuotes.length;
+            showQuote(currentQuoteIndex);
+          }, 7000);
+        }
+      }
+
+      function resetQuoteTimer() {
+        clearInterval(quoteTimer);
+        startQuoteTimer();
+      }
+
+      initWorldMap();
+      initQuoteSlideshow();
+      fetchPrayerTimesByCity();
+      setInterval(tick, 1000);
+      setInterval(fetchPrayerTimesByCity, 60000 * 15);
+
+      const bubbleSymbols = ['🌙', '🕌', '✨', '⭐'];
+      $(document).on('click', function(e) {
+        const x = e.clientX;
+        const y = e.clientY;
+
+        const count = 2;
+        for (let i = 0; i < count; i++) {
+          const symbol = bubbleSymbols[Math.floor(Math.random() * bubbleSymbols.length)];
+          const randX = (Math.random() - 0.5).toFixed(2);
+
+          const $bubble = $('<span></span>')
+            .addClass('click-bubble')
+            .text(symbol)
+            .css({
+              left: `${x + (Math.random() * 20 - 10)}px`,
+              top: `${y + (Math.random() * 20 - 10)}px`,
+              '--rand-x': randX
+            });
+
+          $('body').append($bubble);
+
+          setTimeout(() => {
+            $bubble.remove();
+          }, 1200);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
